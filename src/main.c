@@ -30,6 +30,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <pwd.h>
 
 #include "voctoknopf.h"
 
@@ -386,6 +387,34 @@ int main(int argc, char* argv[])
 			exit(EXIT_FAILURE);
 		}
 		read_bank(i);
+	}
+
+	const char *name = "nobody";
+	struct passwd *pwd;
+	errno = 0;
+	pwd = getpwnam(name);
+	if (pwd == NULL) {
+		if (errno == 0)
+			fprintf(stderr, "%s: getpwnam: "
+					"User \"%s\" not found\n", name);
+		else
+			fprintf(stderr, "%s: getpwnam: %m\n", __func__);
+		exit(EXIT_FAILURE);
+	}
+
+	if (setgroups(0, NULL) == -1) {
+		fprintf(stderr, "%s: setgroups: %m\n", __func__);
+		exit(EXIT_FAILURE);
+	}
+	if (setgid(pwd->pw_gid) == -1) {
+		fprintf(stderr, "%s: setgid: gid %d: %m\n",
+				__func__, pwd->pw_gid);
+		exit(EXIT_FAILURE);
+	}
+	if (setuid(pwd->pw_uid) == -1) {
+		fprintf(stderr, "%s: setuid: uid %d: %m\n",
+				__func__, pwd->pw_uid);
+		exit(EXIT_FAILURE);
 	}
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
