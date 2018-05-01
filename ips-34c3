@@ -1,0 +1,10 @@
+Voctoknopf 1	10.73.1.25	<->	Encoder 1	10.73.1.3
+Voctoknopf 2	10.73.2.25	<->	Encoder 2	10.73.2.3
+Voctoknopf 3	10.73.3.25	<->	Encoder 3	10.73.3.3
+Voctoknopf 4	10.73.4.25	<->	Encoder 4	10.73.4.3
+Voctoknopf 5	10.73.5.25	<->	Encoder 5	10.73.5.3
+Voctoknopf 6	10.73.6.25	<->	Encoder 6	10.73.6.3
+
+Network address is 10.73.0.0/16
+
+See also: https://c3voc.de/wiki/intern:34c3:netzplan

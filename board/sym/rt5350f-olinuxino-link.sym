@@ -1,0 +1,77 @@
+v 20150930 2
+T 0 3000 8 10 1 1 0 0 1
+refdes=B?
+T 0 -400 5 8 0 0 0 0 1
+numslots=5
+T 0 -600 5 8 0 0 0 0 1
+slotdef=0:EXT1-26,EXT1-24,EXT1-23,EXT1-21,EXT2-18
+T 0 -800 5 8 0 0 0 0 1
+slotdef=1:EXT1-22,EXT1-20,EXT1-19,EXT1-17,EXT2-19
+T 5 -1000 5 8 0 0 0 0 1
+slotdef=2:EXT1-18,EXT1-16,EXT1-15,EXT1-13,EXT2-20
+T 0 -1200 5 8 0 0 0 0 1
+slotdef=3:EXT1-14,EXT1-12,EXT1-11,EXT1-9,EXT2-21
+T 0 -1400 5 8 0 0 0 0 1
+slotdef=4:EXT1-10,EXT1-8,EXT1-7,EXT1-5,EXT2-22
+B 0 0 2300 2900 3 10 2 0 -1 -1 0 -1 -1 -1 -1 -1
+T 150 2550 9 12 1 0 0 0 1
+RT5350F-OLinuXino
+T 150 2250 9 12 1 0 0 0 1
+Link
+T 700 2245 8 12 1 1 0 0 1
+slot=0
+P -100 1900 0 1900 1 0 0
+{
+T 50 1900 9 10 1 1 0 1 1
+pinlabel=LINK
+T -100 1950 5 10 1 1 0 6 1
+pinnumber=EXT2-18
+T 50 1800 5 8 0 1 0 2 1
+pintype=out
+T -50 1850 5 10 0 1 0 8 1
+pinseq=5
+}
+P -100 1500 0 1500 1 0 0
+{
+T 50 1500 9 10 1 1 0 1 1
+pinlabel=TXOP
+T -100 1550 5 10 1 1 0 6 1
+pinnumber=EXT1-26
+T 50 1400 5 8 0 1 0 2 1
+pintype=io
+T -50 1450 5 10 0 1 0 8 1
+pinseq=1
+}
+P -100 1100 0 1100 1 0 0
+{
+T 50 1100 9 10 1 1 0 1 1
+pinlabel=TXOM
+T -100 1150 5 10 1 1 0 6 1
+pinnumber=EXT1-24
+T 50 1000 5 8 0 1 0 2 1
+pintype=io
+T -50 1050 5 10 0 1 0 8 1
+pinseq=2
+}
+P -100 700 0 700 1 0 0
+{
+T 50 700 9 10 1 1 0 1 1
+pinlabel=RXIP
+T -100 750 5 10 1 1 0 6 1
+pinnumber=EXT1-23
+T 50 600 5 8 0 1 0 2 1
+pintype=io
+T -50 650 5 10 0 1 0 8 1
+pinseq=3
+}
+P -100 300 0 300 1 0 0
+{
+T 50 300 9 10 1 1 0 1 1
+pinlabel=RXIM
+T -100 350 5 10 1 1 0 6 1
+pinnumber=EXT1-21
+T 50 200 5 8 0 1 0 2 1
+pintype=io
+T -50 250 5 10 0 1 0 8 1
+pinseq=4
+}

@@ -1,0 +1,5 @@
+(reset-component-library)
+(component-library "sym")
+
+(reset-source-library)
+(source-library ".")

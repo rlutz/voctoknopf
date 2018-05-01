@@ -1,0 +1,44 @@
+v 20150930 2
+B 0 0 2100 1200 3 10 2 0 -1 -1 0 -1 -1 -1 -1 -1
+T 0 1300 8 10 1 1 0 0 1
+refdes=RG?
+T 0 -200 5 8 0 0 0 0 1
+source=redgreen.sch
+T 100 900 8 12 1 1 0 0 1
+description=Red/green LED
+P -100 600 0 600 1 0 0
+{
+T 50 600 9 10 1 1 0 1 1
+pinlabel=red
+T 50 650 5 8 0 1 0 0 1
+pinnumber=red
+T 50 500 5 8 0 1 0 2 1
+pintype=pas
+}
+P 1900 -100 1900 0 1 0 0
+{
+T 1900 50 9 10 1 1 270 7 1
+pinlabel=GND
+T 2000 50 5 8 0 1 270 6 1
+pinnumber=GND
+T 1800 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P -100 200 0 200 1 0 0
+{
+T 50 200 9 10 1 1 0 1 1
+pinlabel=green
+T 50 300 5 8 0 1 0 0 1
+pinnumber=green
+T 50 100 5 8 0 1 0 2 1
+pintype=pas
+}
+P 1900 1300 1900 1200 1 0 0
+{
+T 1900 1150 9 10 1 1 90 7 1
+pinlabel=+3.3V
+T 1800 1150 5 8 0 1 90 6 1
+pinnumber=+3.3V
+T 2000 1150 5 8 0 1 90 8 1
+pintype=pwr
+}

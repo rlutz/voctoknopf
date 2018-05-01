@@ -1,0 +1,93 @@
+v 20150930 2
+T 0 1900 8 10 1 1 0 0 1
+refdes=B?
+T 0 1700 8 10 1 1 0 0 1
+value=RT5350F-OLinuXino
+T 0 1500 8 8 1 1 0 0 1
+footprint=RT5350F-OLinuXino
+B 0 0 3600 1400 3 10 0 0 -1 -1 0 -1 -1 -1 -1 -1
+T 150 1050 9 12 1 0 0 0 1
+RT5350F-OLinuXino
+T 150 750 9 12 1 0 0 0 1
+Power
+P 200 -100 200 0 1 0 0
+{
+T 200 50 9 10 1 1 270 7 1
+pinlabel=GND
+T 250 -100 5 8 1 1 270 0 1
+pinnumber=EXT1-2
+T 100 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P 600 -100 600 0 1 0 0
+{
+T 600 50 9 10 1 1 270 7 1
+pinlabel=GND
+T 650 -100 5 8 1 1 270 0 1
+pinnumber=EXT2-2
+T 500 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P 1000 -100 1000 0 1 0 0
+{
+T 1000 50 9 10 1 1 270 7 1
+pinlabel=GND
+T 1050 -100 5 8 1 1 270 0 1
+pinnumber=EXT3-16
+T 900 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P 1400 -100 1400 0 1 0 0
+{
+T 1400 50 9 10 1 1 270 7 1
+pinlabel=+5V
+T 1450 -100 5 8 1 1 270 0 1
+pinnumber=EXT1-1
+T 1300 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P 1800 -100 1800 0 1 0 0
+{
+T 1800 50 9 10 1 1 270 7 1
+pinlabel=+5V
+T 1850 -100 5 8 1 1 270 0 1
+pinnumber=EXT3-1
+T 1700 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P 2200 -100 2200 0 1 0 0
+{
+T 2200 50 9 10 1 1 270 7 1
+pinlabel=+1.2V
+T 2250 -100 5 8 1 1 270 0 1
+pinnumber=EXT3-4
+T 2100 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P 2600 -100 2600 0 1 0 0
+{
+T 2600 50 9 10 1 1 270 7 1
+pinlabel=+1.8V
+T 2650 -100 5 8 1 1 270 0 1
+pinnumber=EXT3-3
+T 2500 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P 3000 -100 3000 0 1 0 0
+{
+T 3000 50 9 10 1 1 270 7 1
+pinlabel=+3.3V
+T 3050 -100 5 8 1 1 270 0 1
+pinnumber=EXT2-1
+T 2900 50 5 8 0 1 270 8 1
+pintype=pwr
+}
+P 3400 -100 3400 0 1 0 0
+{
+T 3400 50 9 10 1 1 270 7 1
+pinlabel=+3.3V
+T 3450 -100 5 8 1 1 270 0 1
+pinnumber=EXT3-2
+T 3300 50 5 8 0 1 270 8 1
+pintype=pwr
+}

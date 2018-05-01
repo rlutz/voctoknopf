@@ -1,0 +1,692 @@
+#!/usr/bin/env python3
+# Copyright (C) 2017 Roland Lutz
+# Copyright (C) 2014-2017 c3voc <voc@c3voc.de>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+import abc
+import configparser
+import getopt
+import inspect
+import json
+import os.path
+import queue
+import socket
+import sys
+import enum
+from gi.repository import GObject
+
+# ============================== Mock Pipeline =================================
+
+@enum.unique
+class CompositeModes(enum.Enum):
+    fullscreen = 0
+    side_by_side_equal = 1
+    side_by_side_preview = 2
+    picture_in_picture = 3
+
+class AudioMix:
+    def __init__(self):
+        self.names = Config.getlist('mix', 'sources')
+        self.volumes = [0.] * len(self.names)
+
+        is_configured = False
+
+        # try per-source volume-setting
+        for index, name in enumerate(self.names):
+            section = 'source.{}'.format(name)
+            try:
+                self.volumes[index] = Config.getfloat(section, 'volume')
+            except (configparser.NoSectionError, configparser.NoOptionError):
+                pass
+            else:
+                is_configured = True
+
+        # try [mix]audiosource shortcut
+        try:
+            name = Config.get('mix', 'audiosource')
+        except configparser.NoOptionError:
+            pass
+        else:
+            if is_configured:
+                sys.stderr.write(
+                    'cannot configure [mix]audiosource-shortcut and '
+                    '[source.*]volume at the same time\n')
+                sys.exit(1)
+
+            if name not in self.names:
+                sys.stderr.write(
+                    'unknown source configured as [mix]audiosource: '
+                    '%s\n' % name)
+                sys.exit(1)
+
+            self.volumes[self.names.index(name)] = 1.
+            is_configured = True
+
+        if not is_configured:
+            self.volumes[0] = 1.
+
+    def setAudioSource(self, source):
+        self.volumes = [float(idx == source) for idx in range(len(self.names))]
+
+    def setAudioSourceVolume(self, source, volume):
+        self.volumes[source] = volume
+
+    def getAudioVolumes(self):
+        return self.volumes
+
+class VideoMix:
+    def __init__(self):
+        self.compositeMode = CompositeModes.fullscreen
+        self.sourceA = 0
+        self.sourceB = 1
+
+    def getVideoSourceA(self):
+        return self.sourceA
+
+    def setVideoSourceA(self, source):
+        if self.sourceB == source:
+            self.sourceB = self.sourceA
+
+        self.sourceA = source
+
+    def getVideoSourceB(self):
+        return self.sourceB
+
+    def setVideoSourceB(self, source):
+        if self.sourceA == source:
+            self.sourceA = self.sourceB
+
+        self.sourceB = source
+
+    def getCompositeMode(self):
+        return self.compositeMode
+
+    def setCompositeMode(self, mode, apply_default_source = True):
+        self.compositeMode = mode
+
+        if apply_default_source:
+            self.selectCompositeModeDefaultSources()
+
+    def selectCompositeModeDefaultSources(self):
+        sectionNames = {
+            CompositeModes.fullscreen: 'fullscreen',
+            CompositeModes.side_by_side_equal: 'side-by-side-equal',
+            CompositeModes.side_by_side_preview: 'side-by-side-preview',
+            CompositeModes.picture_in_picture: 'picture-in-picture'
+        }
+
+        compositeModeName = self.compositeMode.name
+        sectionName = sectionNames[self.compositeMode]
+
+        try:
+            defSource = Config.get(sectionName, 'default-a')
+            self.setVideoSourceA(self.names.index(defSource))
+            sys.stderr.write('Changing sourceA to default of Mode %s: %s\n'
+                             % (compositeModeName, defSource))
+        except Exception as e:
+            pass
+
+        try:
+            defSource = Config.get(sectionName, 'default-b')
+            self.setVideoSourceB(self.names.index(defSource))
+            sys.stderr.write('Changing sourceB to default of Mode %s: %s\n'
+                             % (compositeModeName, defSource))
+        except Exception as e:
+            pass
+
+class StreamBlanker:
+    def __init__(self):
+        self.blankSource = None
+
+    def setBlankSource(self, source):
+        self.blankSource = source
+
+class Pipeline:
+    def __init__(self):
+        self.vmix = VideoMix()
+        self.amix = AudioMix()
+
+        if Config.getboolean('stream-blanker', 'enabled'):
+            self.streamblanker = StreamBlanker()
+
+# ============================== Configuration =================================
+
+Config = None
+
+class VocConfigParser(configparser.SafeConfigParser):
+    def getlist(self, section, option):
+        option = self.get(section, option).strip()
+        if len(option) == 0:
+            return []
+
+        unfiltered = [x.strip() for x in option.split(',')]
+        return list(filter(None, unfiltered))
+
+    def add_section_if_missing(self, section):
+        try:
+            self.add_section(section)
+        except configparser.DuplicateSectionError:
+            pass
+
+# ============================== Control Server ================================
+
+class Response(object):
+    def __init__(self, *args):
+        self.args = args
+
+    def __str__(self):
+        return " ".join(map(str, self.args))
+
+class OkResponse(Response):
+    pass
+
+class NotifyResponse(Response):
+    pass
+
+class ControlServerCommands(object):
+    def __init__(self, pipeline):
+        self.pipeline = pipeline
+
+        self.sources = Config.getlist('mix', 'sources')
+        if Config.getboolean('stream-blanker', 'enabled'):
+            self.blankerSources = Config.getlist('stream-blanker', 'sources')
+        else:
+            del self._get_stream_status
+            del self.get_stream_status
+            del self.set_stream_blank
+            del self.set_stream_live
+
+    # Commands are defined below. Errors are sent to the clients by throwing
+    # exceptions, they will be turned into messages outside.
+
+    def message(self, *args):
+        """sends a message through the control-server, which can be received by
+        user-defined scripts. does not change the state of the voctocore."""
+        return NotifyResponse('message', *args)
+
+    def help(self):
+        helplines = []
+
+        helplines.append("Commands:")
+        for name, func in ControlServerCommands.__dict__.items():
+            if name[0] == '_':
+                continue
+
+            if not func.__code__:
+                continue
+
+            params = inspect.signature(func).parameters
+            params_iter = (str(info) for name, info in params.items())
+            next(params_iter)
+            params_str = ', '.join(params_iter)
+
+            command_sig = '\t' + name
+
+            if params_str:
+                command_sig += ': ' + params_str
+
+            if func.__doc__:
+                command_sig += '\n\t\t{}\n'.format('\n\t\t'.join(
+                    [line.strip() for line in func.__doc__.splitlines()]
+                ))
+
+            helplines.append(command_sig)
+
+        helplines.append('\t' + 'quit / exit')
+
+        helplines.append("\n")
+        helplines.append("Source-Names:")
+        for source in self.sources:
+            helplines.append("\t" + source)
+
+        if Config.getboolean('stream-blanker', 'enabled'):
+            helplines.append("\n")
+            helplines.append("Stream-Blanker Sources-Names:")
+            for source in self.blankerSources:
+                helplines.append("\t" + source)
+
+        helplines.append("\n")
+        helplines.append("Composition-Modes:")
+        for mode in CompositeModes:
+            helplines.append("\t" + mode.name)
+
+        return OkResponse("\n".join(helplines))
+
+    def _get_video_status(self):
+        a = self.sources[self.pipeline.vmix.getVideoSourceA()]
+        b = self.sources[self.pipeline.vmix.getVideoSourceB()]
+        return [a, b]
+
+    def get_video(self):
+        """gets the current video-status, consisting of the name of
+           video-source A and video-source B"""
+        status = self._get_video_status()
+        return OkResponse('video_status', *status)
+
+    def set_video_a(self, src_name):
+        """sets the video-source A to the supplied source-name or source-id,
+           swapping A and B if the supplied source is currently used as
+           video-source B"""
+        src_id = self.sources.index(src_name)
+        self.pipeline.vmix.setVideoSourceA(src_id)
+
+        status = self._get_video_status()
+        return NotifyResponse('video_status', *status)
+
+    def set_video_b(self, src_name):
+        """sets the video-source B to the supplied source-name or source-id,
+           swapping A and B if the supplied source is currently used as
+           video-source A"""
+        src_id = self.sources.index(src_name)
+        self.pipeline.vmix.setVideoSourceB(src_id)
+
+        status = self._get_video_status()
+        return NotifyResponse('video_status', *status)
+
+    def _get_audio_status(self):
+        volumes = self.pipeline.amix.getAudioVolumes()
+
+        return json.dumps({
+            self.sources[idx]: round(volume, 4)
+            for idx, volume in enumerate(volumes)
+        })
+
+    def get_audio(self):
+        """gets the current volumes of the audio-sources"""
+        status = self._get_audio_status()
+        return OkResponse('audio_status', status)
+
+    def set_audio(self, src_name):
+        """sets the audio-source to the supplied source-name or source-id"""
+        src_id = self.sources.index(src_name)
+        self.pipeline.amix.setAudioSource(src_id)
+
+        status = self._get_audio_status()
+        return NotifyResponse('audio_status', status)
+
+    def set_audio_volume(self, src_name, volume):
+        """sets the volume of the supplied source-name or source-id"""
+        src_id = self.sources.index(src_name)
+        volume = float(volume)
+        if volume < 0.0:
+            raise ValueError("volume must be positive")
+        self.pipeline.amix.setAudioSourceVolume(src_id, volume)
+
+        status = self._get_audio_status()
+        return NotifyResponse('audio_status', status)
+
+    def _get_composite_status(self):
+        mode = self.pipeline.vmix.getCompositeMode()
+        return mode.name
+
+    def get_composite_mode(self):
+        """gets the name of the current composite-mode"""
+        status = self._get_composite_status()
+        return OkResponse('composite_mode', status)
+
+    def set_composite_mode(self, mode_name):
+        """sets the name of the id of the composite-mode"""
+        mode = CompositeModes[mode_name]
+        self.pipeline.vmix.setCompositeMode(mode)
+
+        composite_status = self._get_composite_status()
+        video_status = self._get_video_status()
+        return [
+            NotifyResponse('composite_mode', composite_status),
+            NotifyResponse('video_status', *video_status)
+        ]
+
+    def set_videos_and_composite(self, src_a_name, src_b_name,
+                                 mode_name):
+        """sets the A- and the B-source synchronously with the composition-mode
+           all parametets can be set to "*" which will leave them unchanged."""
+        if src_a_name != '*':
+            src_a_id = self.sources.index(src_a_name)
+            self.pipeline.vmix.setVideoSourceA(src_a_id)
+
+        if src_b_name != '*':
+            src_b_id = self.sources.index(src_b_name)
+            self.pipeline.vmix.setVideoSourceB(src_b_id)
+
+        if mode_name != '*':
+            mode = CompositeModes[mode_name]
+            called_with_source = \
+                src_a_name != '*' or \
+                src_b_name != '*'
+
+            self.pipeline.vmix.setCompositeMode(
+                mode, apply_default_source=not called_with_source)
+
+        composite_status = self._get_composite_status()
+        video_status = self._get_video_status()
+
+        return [
+            NotifyResponse('composite_mode', composite_status),
+            NotifyResponse('video_status', *video_status)
+        ]
+
+    def _get_stream_status(self):
+        blankSource = self.pipeline.streamblanker.blankSource
+        if blankSource is None:
+            return ('live',)
+
+        return 'blank', self.blankerSources[blankSource]
+
+    def get_stream_status(self):
+        """gets the current streamblanker-status"""
+        status = self._get_stream_status()
+        return OkResponse('stream_status', *status)
+
+    def set_stream_blank(self, source_name):
+        """sets the streamblanker-status to blank with the specified
+           blanker-source-name or -id"""
+        src_id = self.blankerSources.index(source_name)
+        self.pipeline.streamblanker.setBlankSource(src_id)
+
+        status = self._get_stream_status()
+        return NotifyResponse('stream_status', *status)
+
+    def set_stream_live(self):
+        """sets the streamblanker-status to live"""
+        self.pipeline.streamblanker.setBlankSource(None)
+
+        status = self._get_stream_status()
+        return NotifyResponse('stream_status', *status)
+
+    def get_config(self):
+        """returns the parsed server-config"""
+        confdict = {header: dict(section)
+                    for header, section in dict(Config).items()}
+        return OkResponse('server_config', json.dumps(confdict))
+
+    def restart_source(self, src_name):
+        """restarts the specified source"""
+        #lib.sources.restart_source(src_name)
+        return OkResponse('source_restarted', src_name)
+
+class TCPMultiConnection(object, metaclass = abc.ABCMeta):
+    def __init__(self, port):
+        self.boundSocket = None
+        self.currentConnections = dict()
+
+        #self.log.debug('Binding to Source-Socket on [::]:%u', port)
+        self.boundSocket = socket.socket(socket.AF_INET6)
+        self.boundSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.boundSocket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY,
+                                    False)
+        self.boundSocket.bind(('::', port))
+        self.boundSocket.listen(1)
+
+        #self.log.debug('Setting GObject io-watch on Socket')
+        GObject.io_add_watch(self.boundSocket, GObject.IO_IN, self.on_connect)
+
+    def on_connect(self, sock, *args):
+        conn, addr = sock.accept()
+        conn.setblocking(False)
+
+        #self.log.info("Incomming Connection from [%s]:%u (fd=%u)",
+        #              addr[0], addr[1], conn.fileno())
+
+        self.currentConnections[conn] = queue.Queue()
+        #self.log.info('Now %u Receiver connected',
+        #              len(self.currentConnections))
+
+        self.on_accepted(conn, addr)
+
+        return True
+
+    def close_connection(self, conn):
+        if conn in self.currentConnections:
+            conn.close()
+            del(self.currentConnections[conn])
+        #self.log.info('Now %u Receiver connected',
+        #              len(self.currentConnections))
+
+    @abc.abstractmethod
+    def on_accepted(self, conn, addr):
+        raise NotImplementedError(
+            "child classes of TCPMultiConnection must implement on_accepted()"
+        )
+
+class ControlServer(TCPMultiConnection):
+    def __init__(self, pipeline):
+        super().__init__(port = 9999)
+        self.command_queue = queue.Queue()
+        self.commands = ControlServerCommands(pipeline)
+
+    def on_accepted(self, conn, addr):
+        #self.log.debug('setting gobject io-watch on connection')
+        GObject.io_add_watch(conn, GObject.IO_IN, self.on_data, [''])
+
+    def on_data(self, conn, _, leftovers, *args):
+        # Asynchronous connection handler.
+        # Pushes data from socket into command queue linewise
+        close_after = False
+        try:
+            while True:
+                try:
+                    leftovers.append(conn.recv(4096).decode(errors='replace'))
+                    if len(leftovers[-1]) == 0:
+                        #self.log.info("Socket was closed")
+                        leftovers.pop()
+                        close_after = True
+                        break
+
+                except UnicodeDecodeError as e:
+                    continue
+        except BlockingIOError:
+            pass
+
+        data = "".join(leftovers)
+        del leftovers[:]
+
+        lines = data.split('\n')
+        for line in lines[:-1]:
+            #self.log.debug("got line: %r", line)
+
+            line = line.strip()
+            # 'quit' = remote wants us to close the connection
+            if line == 'quit' or line == 'exit':
+                #self.log.info("Client asked us to close the Connection")
+                self.close_connection(conn)
+                return False
+
+            #self.log.debug('re-starting on_loop scheduling')
+            GObject.idle_add(self.on_loop)
+
+            self.command_queue.put((line, conn))
+
+        if close_after:
+            self.close_connection(conn)
+            return False
+
+        if lines[-1] != '':
+            #self.log.debug("remaining %r", lines[-1])
+            pass
+
+        leftovers.append(lines[-1])
+        return True
+
+    def on_loop(self):
+        # Command handler. Processes commands in the command queue whenever
+        # nothing else is happening (registered as GObject idle callback)
+
+        #self.log.debug('on_loop called')
+
+        if self.command_queue.empty():
+            #self.log.debug('command_queue is empty again, '
+            #               'stopping on_loop scheduling')
+            return False
+
+        line, requestor = self.command_queue.get()
+
+        words = line.split()
+        if len(words) < 1:
+            #self.log.debug('command_queue is empty again, '
+            #               'stopping on_loop scheduling')
+            return True
+
+        command = words[0]
+        args = words[1:]
+
+        #self.log.info("processing command %r with args %s", command, args)
+
+        response = None
+        try:
+            # deny calling private methods
+            if command[0] == '_':
+                #self.log.info('private methods are not callable')
+                raise KeyError()
+
+            command_function = self.commands.__class__.__dict__[command]
+
+        except KeyError as e:
+            #self.log.info("received unknown command %s", command)
+            response = "error unknown command %s\n" % command
+
+        else:
+            try:
+                responseObject = command_function(self.commands, *args)
+
+            except Exception as e:
+                message = str(e) or "<no message>"
+                response = "error %s\n" % message
+
+            else:
+                if isinstance(responseObject, NotifyResponse):
+                    responseObject = [responseObject]
+
+                if isinstance(responseObject, list):
+                    for obj in responseObject:
+                        signal = "%s\n" % str(obj)
+                        for conn in self.currentConnections:
+                            self._schedule_write(conn, signal)
+                else:
+                    response = "%s\n" % str(responseObject)
+
+        finally:
+            if response is not None and requestor in self.currentConnections:
+                self._schedule_write(requestor, response)
+
+        return False
+
+    def _schedule_write(self, conn, message):
+        queue = self.currentConnections[conn]
+
+        #self.log.debug('re-starting on_write[%u] scheduling', conn.fileno())
+        GObject.io_add_watch(conn, GObject.IO_OUT, self.on_write)
+
+        queue.put(message)
+
+    def on_write(self, conn, *args):
+        #self.log.debug('on_write[%u] called', conn.fileno())
+
+        try:
+            queue = self.currentConnections[conn]
+        except KeyError:
+            return False
+
+        if queue.empty():
+            #self.log.debug('write_queue[%u] is empty again, '
+            #               'stopping on_write scheduling',
+            #               conn.fileno())
+            return False
+
+        message = queue.get()
+        try:
+            conn.send(message.encode())
+        except Exception as e:
+            #self.log.warning('failed to send message', exc_info=True)
+            pass
+
+        return True
+
+# ==============================================================================
+
+def main():
+    try:
+        options, args = getopt.getopt(
+            sys.argv[1:], 'i:v', ['ini-file', 'verbose', 'help', 'version'])
+    except getopt.GetoptError as e:
+        sys.stderr.write(
+            "%s: %s\n" % (os.path.basename(sys.argv[0]), e.msg))
+        sys.stderr.write(
+            "Try `%s --help' for more information.\n" % sys.argv[0])
+        sys.exit(1)
+
+    ini_files = []
+    verbose = False
+
+    for option, value in options:
+        if option == '-i' or option == '--ini-file':
+            ini_files.append(value)
+        elif option == '-v' or option == '--verbose':
+            verbose = True
+        elif option == '-h' or option == '--help':
+            sys.stdout.write('''\
+Usage: %s [OPTION]...
+
+  -i, --ini-file=FILE   load configuration file
+  -v, --verbose         verbose mode
+      --help            help; this message
+      --version         show version information
+''' % sys.argv[0])
+            return
+        elif option == '-V' or option == '--version':
+            sys.stdout.write('''\
+mocktocore
+Copyright (C) 2017 Roland Lutz
+Copyright (C) 2014-2017 c3voc <voc@c3voc.de>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+''')
+            return
+
+    global Config
+    Config = VocConfigParser()
+    readfiles = Config.read(ini_files)
+
+    for ini_file in ini_files:
+        if ini_file not in readfiles:
+            raise RuntimeError(
+                'config-file "{}" could not be read'.format(ini_file))
+
+    pipeline = Pipeline()
+    controlserver = ControlServer(pipeline)
+    GObject.MainLoop().run()
+
+if __name__ == '__main__':
+    main()
