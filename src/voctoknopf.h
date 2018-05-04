@@ -20,6 +20,8 @@
 
 #include <stdbool.h>
 
+void init(void);
+
 /* button handlers */
 
 void bank0(int button);

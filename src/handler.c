@@ -27,7 +27,7 @@ static enum {
 	m_picture_in_picture,
 	m_fullscreen,
 	m_unknown = -1
-} mode_active = m_unknown, mode_presel = m_unknown;
+} mode_active, mode_presel;
 
 static enum {
 	s_projection,
@@ -36,8 +36,7 @@ static enum {
 	s_cam3,
 	s_extra,
 	s_unknown = -1
-} srca_active = s_unknown, srca_presel = s_unknown,
-  srcb_active = s_unknown, srcb_presel = s_unknown;
+} srca_active, srca_presel, srcb_active, srcb_presel;
 
 static enum {
 	p_info,
@@ -46,7 +45,7 @@ static enum {
 	p_extra,
 	p_black,
 	p_unknown = -1
-} projection = p_unknown;
+} projection;
 
 static enum led LED_MODE_ACTIVE[] = {
 	led_k1red,
@@ -121,7 +120,7 @@ static enum server_stream_status {
 	ss_blank_pause,
 	ss_blank_nostream,
 	ss_unknown = -1
-} server_stream_status = ss_unknown;
+} server_stream_status;
 
 static enum server_composite_mode {
 	cm_fullscreen,
@@ -129,7 +128,7 @@ static enum server_composite_mode {
 	cm_side_by_side_preview,
 	cm_picture_in_picture,
 	cm_unknown = -1
-} server_composite_mode = cm_unknown;
+} server_composite_mode;
 
 static enum server_video_status {
 	vs_cam1,
@@ -137,9 +136,32 @@ static enum server_video_status {
 	vs_cam3,
 	vs_slides,
 	vs_unknown = -1
-} server_video_status_a = vs_unknown, server_video_status_b = vs_unknown;
+} server_video_status_a, server_video_status_b;
 
 static void update_green_tally();
+
+
+void init()
+{
+	mode_active = m_unknown;
+	mode_presel = m_unknown;
+
+	srca_active = s_unknown;
+	srca_presel = s_unknown;
+	srcb_active = s_unknown;
+	srcb_presel = s_unknown;
+
+	projection = p_unknown;
+
+	server_stream_status = ss_unknown;
+	server_composite_mode = cm_unknown;
+	server_video_status_a = vs_unknown;
+	server_video_status_b = vs_unknown;
+
+	send_cmd("get_stream_status\n"
+		 "get_composite_mode\n"
+		 "get_video\n");
+}
 
 
 static void update_leds()

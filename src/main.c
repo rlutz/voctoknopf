@@ -437,9 +437,7 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	send_cmd("get_stream_status\n"
-		 "get_composite_mode\n"
-		 "get_video\n");
+	init();
 
 	if (atexit(quench_leds) == -1) {
 		fprintf(stderr, "atexit failed\n");
