@@ -86,8 +86,10 @@ static int irq_fd[4];
 static int sockfd;
 
 static char sockbuf[1024];
-static size_t sockbuf_used = 0;
-static bool sockbuf_overflow = false;
+static size_t sockbuf_used;
+static bool sockbuf_overflow;
+
+static bool connected = false;
 
 static bool quit = false;
 
@@ -169,6 +171,9 @@ static void read_bank(unsigned int bank)
 		}
 	} while (pollfd.revents & POLLPRI);
 
+	if (!connected)
+		return;
+
 	for (unsigned int i = bank * 5;
 	     i < (bank + 1) * 5 + (bank == 3); i++) {
 		if (!button_state[i] && newstate[i])
@@ -189,6 +194,55 @@ static void read_bank(unsigned int bank)
 }
 
 
+static void try_connect(const char *host)
+{
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (sockfd == -1) {
+		fprintf(stderr, "socket: %m\n");
+		exit(EXIT_FAILURE);
+	}
+
+	struct sockaddr_in sa = {
+		.sin_family = AF_INET,
+		.sin_port = htons(9999)
+	};
+	if (inet_aton(host, &sa.sin_addr) == 0) {
+		fprintf(stderr, "Invalid host address \"%s\"\n", host);
+		exit(EXIT_FAILURE);
+	}
+	if (connect(sockfd, (struct sockaddr *)&sa, sizeof sa) == -1) {
+		fprintf(stderr, "connect: host %s, port %hd: %m\n",
+				inet_ntoa(sa.sin_addr), ntohs(sa.sin_port));
+		if (close(sockfd) == -1)
+			fprintf(stderr, "%s: close: fd %d: %m\n",
+					__func__, sockfd);
+		sockfd = -1;
+		return;
+	}
+
+	fprintf(stderr, "connected to %s:%d\n",
+		inet_ntoa(sa.sin_addr), ntohs(sa.sin_port));
+
+	connected = true;
+	sockbuf_used = 0;
+	sockbuf_overflow = false;
+
+	set_extra_led(true);
+	init();
+}
+
+static void disconnect()
+{
+	if (close(sockfd) == -1)
+		fprintf(stderr, "%s: close: fd %d: %m\n", __func__, sockfd);
+	sockfd = -1;
+	connected = false;
+
+	set_extra_led(false);
+	for (unsigned int i = 0; i < LED_COUNT; i++)
+		set_led(i, false);
+}
+
 void send_cmd(const char *s)
 {
 	size_t count = strlen(s);
@@ -199,12 +253,14 @@ void send_cmd(const char *s)
 		if (w == -1) {
 			fprintf(stderr, "%s: write: fd %d: %m\n",
 					__func__, sockfd);
-			exit(EXIT_FAILURE);
+			disconnect();
+			return;
 		}
 		if (w == 0) {
 			fprintf(stderr, "%s: write: fd %d: End of file\n",
 					__func__, sockfd);
-			exit(EXIT_FAILURE);
+			disconnect();
+			return;
 		}
 
 		s += w;
@@ -219,11 +275,13 @@ static void sock_read()
 	switch (r) {
 	case -1:
 		fprintf(stderr, "%s: read: fd %d: %m\n", __func__, sockfd);
-		exit(EXIT_FAILURE);
+		disconnect();
+		return;
 	case 0:
 		fprintf(stderr, "%s: read: fd %d: End of file\n",
 				__func__, sockfd);
-		exit(EXIT_FAILURE);
+		disconnect();
+		return;
 	}
 	sockbuf_used += r;
 
@@ -389,6 +447,11 @@ int main(int argc, char* argv[])
 		read_bank(i);
 	}
 
+	if (atexit(quench_leds) == -1) {
+		fprintf(stderr, "atexit failed\n");
+		exit(EXIT_FAILURE);
+	}
+
 	const char *name = "nobody";
 	struct passwd *pwd;
 	errno = 0;
@@ -417,43 +480,20 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd == -1) {
-		fprintf(stderr, "socket: %m\n");
-		exit(EXIT_FAILURE);
-	}
-
-	struct sockaddr_in sa = {
-		.sin_family = AF_INET,
-		.sin_port = htons(9999)
-	};
-	if (inet_aton(argv[1], &sa.sin_addr) == 0) {
-		fprintf(stderr, "Invalid host address \"%s\"\n", argv[1]);
-		exit(EXIT_FAILURE);
-	}
-	if (connect(sockfd, (struct sockaddr *)&sa, sizeof sa) == -1) {
-		fprintf(stderr, "connect: host %s, port %hd: %m\n",
-				inet_ntoa(sa.sin_addr), ntohs(sa.sin_port));
-		exit(EXIT_FAILURE);
-	}
-
-	init();
-
-	if (atexit(quench_leds) == -1) {
-		fprintf(stderr, "atexit failed\n");
-		exit(EXIT_FAILURE);
-	}
-	set_extra_led(true);
-
 	struct pollfd fds[5] = {
 		{ .fd = irq_fd[0], .events = POLLPRI },
 		{ .fd = irq_fd[1], .events = POLLPRI },
 		{ .fd = irq_fd[2], .events = POLLPRI },
 		{ .fd = irq_fd[3], .events = POLLPRI },
-		{ .fd = sockfd,    .events = POLLIN }
+		{                  .events = POLLIN }
 	};
 	do {
-		if (poll(fds, 5, -1) == -1 && errno != EINTR) {
+		if (!connected)
+			try_connect(argv[1]);
+
+		fds[4].fd = sockfd;
+		if ((connected ? poll(fds, 5, -1)
+			       : poll(fds, 4, 1000)) == -1 && errno != EINTR) {
 			fprintf(stderr, "poll: %m\n");
 			exit(EXIT_FAILURE);
 		}
@@ -466,7 +506,7 @@ int main(int argc, char* argv[])
 			read_bank(2);
 		if (fds[3].revents & POLLPRI)
 			read_bank(3);
-		if (fds[4].revents & POLLIN)
+		if (fds[4].revents & POLLIN && connected)
 			sock_read();
 	} while (!quit);
 
