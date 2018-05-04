@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <pwd.h>
+#include <netinet/tcp.h>
 
 #include "voctoknopf.h"
 
@@ -218,6 +219,42 @@ static void try_connect(const char *host)
 					__func__, sockfd);
 		sockfd = -1;
 		return;
+	}
+
+	int keepalive = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE,
+		       &keepalive, sizeof keepalive) == -1) {
+		fprintf(stderr, "%s: setsockopt: SO_KEEPALIVE: %m\n",
+				__func__);
+		exit(EXIT_FAILURE);
+	}
+
+	int keepidle = 1, keepintvl = 1, keepcnt = 1;
+	if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPIDLE,
+		       &keepidle, sizeof keepidle) == -1) {
+		fprintf(stderr, "%s: setsockopt: TCP_KEEPIDLE: %m\n",
+				__func__);
+		exit(EXIT_FAILURE);
+	}
+	if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPINTVL,
+		       &keepintvl, sizeof keepintvl) == -1) {
+		fprintf(stderr, "%s: setsockopt: TCP_KEEPINTVL: %m\n",
+				__func__);
+		exit(EXIT_FAILURE);
+	}
+	if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPCNT,
+		       &keepcnt, sizeof keepcnt) == -1) {
+		fprintf(stderr, "%s: setsockopt: TCP_KEEPCNT: %m\n",
+				__func__);
+		exit(EXIT_FAILURE);
+	}
+
+	unsigned int user_timeout = 1000;
+	if (setsockopt(sockfd, IPPROTO_TCP, TCP_USER_TIMEOUT,
+		       &user_timeout, sizeof user_timeout) == -1) {
+		fprintf(stderr, "%s: setsockopt TCP_USER_TIMEOUT: %m\n",
+				__func__);
+		exit(EXIT_FAILURE);
 	}
 
 	fprintf(stderr, "connected to %s:%d\n",
