@@ -83,3 +83,53 @@ to the user interface; ignoring the change would cause an
 inconsistency between the selection and the “preview”; and re-sending
 the command would cause a conflict if more than one Voctoknopf is
 connected to the server.
+
+
+### How `voctoknopf` deals with connection loss
+
+When a connection error occurs, `voctoknopf` closes the connection and
+communicates this to the operator by turning all front LEDs off.  It
+then tries to re-connect to the server, and if the connect fails,
+waits a second before the next try.
+
+With a TCP connection, connection loss isn't normally detected for
+some time unless the connection is closed by the remote end.  However,
+it is important to make the Voctoknopf operator aware of this
+situation as soon as possible.  Therefore, `voctoknopf` uses two
+mechanisms to detect connection loss:
+
+* It sets the socket option `TCP_USER_TIMEOUT` to 1000, causing the
+  TCP connection to be forcibly closed and `read(2)` to return
+  `ETIMEDOUT` if transmitted data remains unacknowledged for 1000ms.
+
+* It sets the socket options `SO_KEEPALIVE` and the corresponding
+  parameter options `TCP_KEEPIDLE`, `TCP_KEEPINTVL`, and `TCP_KEEPCNT`
+  to 1, causing an empty keepalive packet to be sent when the socket
+  has been idle for 1 second and then every 1 second after that, and
+  the connection to be dropped if 1 keepalive packet hasn't been
+  acknowledged when the next one is about to be sent.
+
+This means that a connection loss is usually detected after 1–2
+seconds but can take up to 3 seconds to detect in the worst-case
+scenario.
+
+
+### Hooking `voctoknopf` into the OpenWRT boot process
+
+To have the `voctoknopf` binary automatically started when the device
+is booted up, copy `voctoknopf.init` to `/etc/init.d/voctoknopf` on
+the device and insert the appropriate Voctocore host IP.  Then run
+`/etc/init.d/voctoknopf enable` to create the matching symlinks in
+`/etc/rc.d/`.
+
+While the `voctoknopf` service is running, its process ID is available
+in `/var/run/voctoknopf.pid`, and the messages normally printed to
+stderr are redirected to the OpenWRT `logd` where they can be viewed
+using
+```
+# logread -e voctoknopf
+```
+You can use the `-f` option to observe new messages as they appear.
+With the default settings, the process is respawned after 5 seconds if
+it should die for any reason (which should not happen in normal
+operation).
