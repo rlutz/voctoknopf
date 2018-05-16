@@ -207,8 +207,7 @@ void bank0(int button)
 
 void bank1(int button)
 {
-	projection = button;	/* not propagated yet */
-	update_projection_leds();
+	/* not yet implemented */
 }
 
 void bank2(int button)
