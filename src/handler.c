@@ -212,6 +212,9 @@ void bank1(int button)
 
 void bank2(int button)
 {
+	if (button != s_projection && button != s_cam1 && button != s_cam2)
+		return;
+
 	srcb_presel = button;
 	update_leds();
 	update_green_tally();
@@ -219,6 +222,9 @@ void bank2(int button)
 
 void bank3(int button)
 {
+	if (button != s_projection && button != s_cam1 && button != s_cam2)
+		return;
+
 	srca_presel = button;
 	update_leds();
 	update_green_tally();
