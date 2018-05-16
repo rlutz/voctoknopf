@@ -139,6 +139,7 @@ static enum server_video_status {
 } server_video_status_a, server_video_status_b;
 
 static void update_green_tally();
+static void update_preview();
 
 
 void init()
@@ -203,6 +204,7 @@ void bank0(int button)
 	mode_presel = button;
 	update_leds();
 	update_green_tally();
+	update_preview();
 }
 
 void bank1(int button)
@@ -224,6 +226,7 @@ void bank2(int button)
 
 	update_leds();
 	update_green_tally();
+	update_preview();
 }
 
 void bank3(int button)
@@ -237,6 +240,7 @@ void bank3(int button)
 
 	update_leds();
 	update_green_tally();
+	update_preview();
 }
 
 void take()
@@ -283,6 +287,36 @@ static void update_green_tally()
 		char cmd[1024];
 		snprintf(cmd, sizeof cmd,
 			 "message green %s %s %s\n",
+			 source_names_for_server[srca_presel],
+			 source_names_for_server[srcb_presel],
+			 mode_names_for_server[mode_presel]);
+		send_cmd(cmd);
+	}
+}
+
+static void update_preview()
+{
+	/* While the stream is blanked, send the pre-selected mode
+	   immediately to the server (instead of waiting for a TAKE)
+	   so it can serve as a "poor man's preview". */
+
+	if (mode_active != m_off)
+		return;
+
+	switch (mode_presel) {
+		char cmd[1024];
+	case m_off:
+		/* nothing to do */
+		break;
+	case m_fullscreen:
+		snprintf(cmd, sizeof cmd,
+			 "set_videos_and_composite %s * fullscreen\n",
+			 source_names_for_server[srca_presel]);
+		send_cmd(cmd);
+		break;
+	default:
+		snprintf(cmd, sizeof cmd,
+			 "set_videos_and_composite %s %s %s\n",
 			 source_names_for_server[srca_presel],
 			 source_names_for_server[srcb_presel],
 			 mode_names_for_server[mode_presel]);
