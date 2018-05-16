@@ -216,6 +216,12 @@ void bank2(int button)
 		return;
 
 	srcb_presel = button;
+	if (mode_presel == m_off || mode_presel == m_fullscreen)
+		if (mode_active == m_off || mode_active == m_fullscreen)
+			mode_presel = m_picture_in_picture;
+		else
+			mode_presel = mode_active;
+
 	update_leds();
 	update_green_tally();
 }
@@ -226,6 +232,9 @@ void bank3(int button)
 		return;
 
 	srca_presel = button;
+	if (mode_presel == m_off)
+		mode_presel = m_fullscreen;
+
 	update_leds();
 	update_green_tally();
 }
