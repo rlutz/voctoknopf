@@ -40,7 +40,7 @@ def main():
         sys.stderr.write('Usage: %s FILENAME\n' % sys.argv[0])
         sys.exit(1)
 
-    execfile(fn)
+    execfile(fn, globals())
 
 if __name__ == '__main__':
     main()
