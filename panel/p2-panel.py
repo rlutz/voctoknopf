@@ -1,3 +1,5 @@
+import config
+
 WIDTH = 209.
 HEIGHT = 125.
 
@@ -37,8 +39,8 @@ del y
 # side-by-side equal
 
 y = mode_center_y - 1 * mode_delta_y - h * .5
-ax = .025; ay = .044; aw = .463; ah = .463
-bx = .513; by = .461; bw = .463; bh = .463
+ax = config.se_ax; ay = config.se_ay; aw = config.se_aw; ah = config.se_ah
+bx = config.se_bx; by = config.se_by; bw = config.se_bw; bh = config.se_bh
 
 rect(x, y, w, h)
 rect(x + ax * w, y + ay * h, aw * w, ah * h)
@@ -55,8 +57,8 @@ del y
 # side-by-side preview
 
 y = mode_center_y - h * .5
-ax = .025; ay = .144; aw = .714; ah = .714
-bx = .763; by = .580; bw = .219; bh = .389
+ax = config.sp_ax; ay = config.sp_ay; aw = config.sp_aw; ah = config.sp_ah
+bx = config.sp_bx; by = config.sp_by; bw = config.sp_bw; bh = config.sp_bh
 
 rect(x, y, w, h)
 rect(x + ax * w, y + ay * h, aw * w, ah * h)
@@ -73,7 +75,7 @@ del y
 # picture-in-picture
 
 y = mode_center_y + 1 * mode_delta_y - h * .5
-bx = .731; by = .723; bw = .258; bh = .258
+bx = config.pp_bx; by = config.pp_by; bw = config.pp_bw; bh = config.pp_bh
 
 rect(x, y, w, h)
 rect(x + bx * w, y + by * h, bw * w, bh * h)

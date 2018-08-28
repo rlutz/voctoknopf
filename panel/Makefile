@@ -41,7 +41,7 @@ MAINTAINERCLEANFILES = \
 
 all: $(TARGETS)
 
-%-engraving0.svg: %-panel.py gen-svg.py
+%-engraving0.svg: %-panel.py config.py config.ini gen-svg.py
 	./gen-svg.py $< > $@
 
 %-engraving1.svg: %-engraving0.svg
@@ -56,10 +56,10 @@ all: $(TARGETS)
 %-engraving.data: %-engraving1.svg parse-svg.py
 	./parse-svg.py < $< > $@
 
-%-cutouts.data: %-panel.py gen-cutouts.py
+%-cutouts.data: %-panel.py config.py config.ini gen-cutouts.py
 	./gen-cutouts.py $< > $@
 
-%-outline.data: %-panel.py gen-outline.py
+%-outline.data: %-panel.py config.py config.ini gen-outline.py
 	./gen-outline.py $< > $@
 
 %-helper.data: %-cutouts.data %-outline.data gen-helper.py
