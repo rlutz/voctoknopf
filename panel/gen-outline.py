@@ -15,6 +15,9 @@ def outline(x, y, width, height):
 def cutout(cx, cy, width, height):
     pass
 
+def special_cutout(sx, sy):
+    pass
+
 def line(x0, y0, x1, y1):
     pass
 

@@ -57,6 +57,9 @@ class SVG:
     def cutout(self, x, y, width, height):
         pass
 
+    def special_cutout(self, sx, sy):
+        pass
+
     def line(self, x0, y0, x1, y1):
         self.lines.append(
             '<path d="M %f,%f %f,%f z" />'
@@ -139,6 +142,7 @@ def main():
     execfile(fn, {
         'outline': svg.outline,
         'cutout': svg.cutout,
+        'special_cutout': svg.special_cutout,
         'line': svg.line,
         'rect': svg.rect,
         'rounded_rect': svg.rounded_rect,

@@ -1,4 +1,4 @@
-GENERATORS = p3-panel.py p2-panel.py
+GENERATORS = p3-panel.py p2-panel.py matrix3-panel.py
 
 TARGETS = \
 	$(GENERATORS:-panel.py=-engraving.data) \
