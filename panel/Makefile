@@ -113,4 +113,6 @@ clean:
 maintainer-clean: clean
 	rm -f $(MAINTAINERCLEANFILES)
 
+.DELETE_ON_ERROR:
+
 .PHONY: all clean maintainer-clean
