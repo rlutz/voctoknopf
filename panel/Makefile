@@ -15,7 +15,8 @@ TARGETS = \
 	$(GENERATORS:-panel.py=-helper.gcode) \
 	$(GENERATORS:-panel.py=-preview.eps) \
 	$(GENERATORS:-panel.py=-preview.pdf) \
-	$(GENERATORS:-panel.py=-preview.png)
+	$(GENERATORS:-panel.py=-preview.png) \
+	$(GENERATORS:-panel.py=-mask.svg)
 
 CLEANFILES = \
 	$(GENERATORS:-panel.py=-engraving0.svg) \
@@ -36,7 +37,8 @@ MAINTAINERCLEANFILES = \
 	$(GENERATORS:-panel.py=-helper.data) \
 	$(GENERATORS:-panel.py=-preview.eps) \
 	$(GENERATORS:-panel.py=-preview.pdf) \
-	$(GENERATORS:-panel.py=-preview.png)
+	$(GENERATORS:-panel.py=-preview.png) \
+	$(GENERATORS:-panel.py=-mask.svg)
 
 
 all: $(TARGETS)
@@ -101,6 +103,9 @@ all: $(TARGETS)
 %-preview.png: %-preview.eps
 	convert -density 360x360 -alpha remove -resize 1000x \
 	        +set date:create +set date:modify $< $@
+
+%-mask.svg: %-panel.py gen-mask.py
+	./gen-mask.py $< > $@
 
 clean:
 	rm -f $(CLEANFILES)
