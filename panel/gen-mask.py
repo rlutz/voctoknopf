@@ -2,6 +2,7 @@
 import sys
 from common import WIDTH, HEIGHT
 
+LEFTRIGHT_SPACING = 2.
 TOPBOTTOM_SPACING = 2.
 
 TUBE_DX = 4.75
@@ -95,7 +96,8 @@ def main():
     print '    }'
     print '  </style>'
 
-    svg_rect(0, TOPBOTTOM_SPACING, WIDTH, HEIGHT - TOPBOTTOM_SPACING * 2)
+    svg_rect(LEFTRIGHT_SPACING, TOPBOTTOM_SPACING,
+             WIDTH - LEFTRIGHT_SPACING * 2, HEIGHT - TOPBOTTOM_SPACING * 2)
 
     svg_circle(TUBE_DX,         HEIGHT - TUBE_DY, TUBE_R)
     svg_circle(TUBE_DX,         TUBE_DY,          TUBE_R)

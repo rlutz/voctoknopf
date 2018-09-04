@@ -14,7 +14,7 @@
         stroke-opacity: 1;
     }
   </style>
-  <rect x="0mm" y="2mm" width="209mm" height="121mm"/>
+  <rect x="2mm" y="2mm" width="205mm" height="121mm"/>
   <circle cx="4.75mm" cy="119.25mm" r="3.5mm"/>
   <circle cx="4.75mm" cy="5.75mm" r="3.5mm"/>
   <circle cx="204.25mm" cy="119.25mm" r="3.5mm"/>
