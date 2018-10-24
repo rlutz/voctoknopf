@@ -35,54 +35,13 @@
 
 #include "voctoknopf.h"
 
-#define STATUS_LED "/sys/class/leds/extra_led"
-#define BUTTON_N "/sys/class/gpio/k%d"
-#define IRQ_N "/sys/class/gpio/u%dirq"
-
-static const char *led_gpio[LED_COUNT] = {
-	"/sys/class/gpio/k1green",
-	"/sys/class/gpio/k1red",
-	"/sys/class/gpio/k2green",
-	"/sys/class/gpio/k2red",
-	"/sys/class/gpio/k3green",
-	"/sys/class/gpio/k3red",
-	"/sys/class/gpio/k4green",
-	"/sys/class/gpio/k4red",
-	"/sys/class/gpio/k5green",
-	"/sys/class/gpio/k5red",
-	"/sys/class/gpio/k6blue",
-	"/sys/class/gpio/k7blue",
-	"/sys/class/gpio/k8blue",
-	"/sys/class/gpio/k9blue",
-	"/sys/class/gpio/k10blue",
-	"/sys/class/gpio/k11green",
-	"/sys/class/gpio/k11red",
-	"/sys/class/gpio/k12green",
-	"/sys/class/gpio/k12red",
-	"/sys/class/gpio/k13green",
-	"/sys/class/gpio/k13red",
-	"/sys/class/gpio/k14green",
-	"/sys/class/gpio/k14red",
-	"/sys/class/gpio/k15green",
-	"/sys/class/gpio/k15red",
-	"/sys/class/gpio/k16green",
-	"/sys/class/gpio/k16red",
-	"/sys/class/gpio/k17green",
-	"/sys/class/gpio/k17red",
-	"/sys/class/gpio/k18green",
-	"/sys/class/gpio/k18red",
-	"/sys/class/gpio/k19green",
-	"/sys/class/gpio/k19red",
-	"/sys/class/gpio/k20green",
-	"/sys/class/gpio/k20red"
-};
 static FILE *led_stream[LED_COUNT];
 static FILE *status_led_stream;
 
-static int button_fd[21];
-static bool button_state[21];
+static int button_fd[BUTTON_COUNT];
+static bool button_state[BUTTON_COUNT];
 
-static int irq_fd[4];
+static int irq_fd[IRQ_COUNT];
 
 static int sockfd;
 
@@ -106,6 +65,9 @@ void set_led(enum led led, bool value)
 
 static void set_status_led(bool on)
 {
+	if (status_led_stream == NULL)
+		return;
+
 	if (fprintf(status_led_stream, "%d\n", on ? 255 : 0) < 0) {
 		fprintf(stderr, "%s: fprintf: fd %d: %m\n",
 			__func__, fileno(status_led_stream));
@@ -144,7 +106,7 @@ static bool get_button_state(int i)
 
 static void read_bank(unsigned int bank)
 {
-	bool newstate[21];
+	bool newstate[BUTTON_COUNT];
 	struct pollfd pollfd;
 	pollfd.fd = irq_fd[bank];
 	pollfd.events = POLLPRI;
@@ -351,7 +313,8 @@ static void sock_read()
 
 static void quench_leds()
 {
-	(void) fprintf(status_led_stream, "0\n");
+	if (status_led_stream != NULL)
+		(void) fprintf(status_led_stream, "0\n");
 
 	for (unsigned int i = 0; i < LED_COUNT; i++)
 		(void) fprintf(led_stream[i], "0\n");
@@ -419,28 +382,37 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	status_led_stream = fopen(STATUS_LED "/brightness", "w");
-	if (status_led_stream == NULL) {
-		fprintf(stderr, "fopen: %s: %m\n", STATUS_LED "/brightness");
-		exit(EXIT_FAILURE);
-	}
-	errno = 0;
-	if (setvbuf(status_led_stream, NULL, _IONBF, 0) != 0) {
-		fprintf(stderr, "setvbuf: %s (fd %d): %m\n",
-			STATUS_LED "/brightness", fileno(status_led_stream));
-		exit(EXIT_FAILURE);
-	}
-	if (fprintf(status_led_stream, "0\n") < 0) {
-		fprintf(stderr, "fprintf: %s (fd %d): %m\n",
-			STATUS_LED "/brightness", fileno(status_led_stream));
-		exit(EXIT_FAILURE);
-	}
-
-	for (int i = 0; i < 21; i++) {
+	if (status_led == NULL)
+		status_led_stream = NULL;
+	else {
 		char pathname[BUFSIZ];
 		if (snprintf(pathname, sizeof pathname,
-			     BUTTON_N "/value", i + 1)
-			    >= sizeof pathname) {
+			     "%s/brightness", status_led) >= sizeof pathname) {
+			fprintf(stderr, "GPIO pathname too long\n");
+			exit(EXIT_FAILURE);
+		}
+		status_led_stream = fopen(pathname, "w");
+		if (status_led_stream == NULL) {
+			fprintf(stderr, "fopen: %s: %m\n", pathname);
+			exit(EXIT_FAILURE);
+		}
+		errno = 0;
+		if (setvbuf(status_led_stream, NULL, _IONBF, 0) != 0) {
+			fprintf(stderr, "setvbuf: %s (fd %d): %m\n",
+					pathname, fileno(status_led_stream));
+			exit(EXIT_FAILURE);
+		}
+		if (fprintf(status_led_stream, "0\n") < 0) {
+			fprintf(stderr, "fprintf: %s (fd %d): %m\n",
+					pathname, fileno(status_led_stream));
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	for (int i = 0; i < BUTTON_COUNT; i++) {
+		char pathname[BUFSIZ];
+		if (snprintf(pathname, sizeof pathname,
+			     "%s/value", button_gpio[i]) >= sizeof pathname) {
 			fprintf(stderr, "GPIO pathname too long\n");
 			exit(EXIT_FAILURE);
 		}
@@ -451,12 +423,11 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	for (unsigned int i = 0; i < 4; i++) {
+	for (unsigned int i = 0; i < IRQ_COUNT; i++) {
 		char pathname[BUFSIZ];
 
 		if (snprintf(pathname, sizeof pathname,
-			     IRQ_N "/edge", i + 1)
-		    >= sizeof pathname) {
+			     "%s/edge", irq_gpio[i]) >= sizeof pathname) {
 			fprintf(stderr, "GPIO pathname too long\n");
 			exit(EXIT_FAILURE);
 		}
@@ -477,8 +448,7 @@ int main(int argc, char* argv[])
 		}
 
 		if (snprintf(pathname, sizeof pathname,
-			     IRQ_N "/value", i + 1)
-		    >= sizeof pathname) {
+			     "%s/value", irq_gpio[i]) >= sizeof pathname) {
 			fprintf(stderr, "GPIO pathname too long\n");
 			exit(EXIT_FAILURE);
 		}
@@ -523,33 +493,30 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	struct pollfd fds[5] = {
-		{ .fd = irq_fd[0], .events = POLLPRI },
-		{ .fd = irq_fd[1], .events = POLLPRI },
-		{ .fd = irq_fd[2], .events = POLLPRI },
-		{ .fd = irq_fd[3], .events = POLLPRI },
-		{                  .events = POLLIN }
-	};
+	struct pollfd fds[IRQ_COUNT + 1];
+	memset(&fds, 0, sizeof fds);
+	for (unsigned int i = 0; i < IRQ_COUNT; i++) {
+		fds[i].fd = irq_fd[i];
+		fds[i].events = POLLPRI;
+	}
+	fds[IRQ_COUNT].events = POLLIN;
+
 	do {
 		if (!connected)
 			try_connect(argv[1]);
 
-		fds[4].fd = sockfd;
-		if ((connected ? poll(fds, 5, -1)
-			       : poll(fds, 4, 1000)) == -1 && errno != EINTR) {
+		fds[IRQ_COUNT].fd = sockfd;
+		if ((connected ? poll(fds, IRQ_COUNT + 1, -1)
+			       : poll(fds, IRQ_COUNT, 1000)) == -1
+		    && errno != EINTR) {
 			fprintf(stderr, "poll: %m\n");
 			exit(EXIT_FAILURE);
 		}
 
-		if (fds[0].revents & POLLPRI)
-			read_bank(0);
-		if (fds[1].revents & POLLPRI)
-			read_bank(1);
-		if (fds[2].revents & POLLPRI)
-			read_bank(2);
-		if (fds[3].revents & POLLPRI)
-			read_bank(3);
-		if (fds[4].revents & POLLIN && connected)
+		for (unsigned int i = 0; i < IRQ_COUNT; i++)
+			if (fds[i].revents & POLLPRI)
+				read_bank(i);
+		if (fds[IRQ_COUNT].revents & POLLIN && connected)
 			sock_read();
 	} while (!quit);
 
