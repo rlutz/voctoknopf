@@ -35,7 +35,7 @@
 
 #include "voctoknopf.h"
 
-#define EXTRA_LED "/sys/class/leds/extra_led"
+#define STATUS_LED "/sys/class/leds/extra_led"
 #define BUTTON_N "/sys/class/gpio/k%d"
 #define IRQ_N "/sys/class/gpio/u%dirq"
 
@@ -77,7 +77,7 @@ static const char *led_gpio[LED_COUNT] = {
 	"/sys/class/gpio/k20red"
 };
 static FILE *led_stream[LED_COUNT];
-static FILE *extra_led_stream;
+static FILE *status_led_stream;
 
 static int button_fd[21];
 static bool button_state[21];
@@ -104,11 +104,11 @@ void set_led(enum led led, bool value)
 	}
 }
 
-static void set_extra_led(bool on)
+static void set_status_led(bool on)
 {
-	if (fprintf(extra_led_stream, "%d\n", on ? 255 : 0) < 0) {
+	if (fprintf(status_led_stream, "%d\n", on ? 255 : 0) < 0) {
 		fprintf(stderr, "%s: fprintf: fd %d: %m\n",
-			__func__, fileno(extra_led_stream));
+			__func__, fileno(status_led_stream));
 		exit(EXIT_FAILURE);
 	}
 }
@@ -264,7 +264,7 @@ static void try_connect(const char *host)
 	sockbuf_used = 0;
 	sockbuf_overflow = false;
 
-	set_extra_led(true);
+	set_status_led(true);
 	init();
 }
 
@@ -275,7 +275,7 @@ static void disconnect()
 	sockfd = -1;
 	connected = false;
 
-	set_extra_led(false);
+	set_status_led(false);
 	for (unsigned int i = 0; i < LED_COUNT; i++)
 		set_led(i, false);
 }
@@ -351,7 +351,7 @@ static void sock_read()
 
 static void quench_leds()
 {
-	(void) fprintf(extra_led_stream, "0\n");
+	(void) fprintf(status_led_stream, "0\n");
 
 	for (unsigned int i = 0; i < LED_COUNT; i++)
 		(void) fprintf(led_stream[i], "0\n");
@@ -419,20 +419,20 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	extra_led_stream = fopen(EXTRA_LED "/brightness", "w");
-	if (extra_led_stream == NULL) {
-		fprintf(stderr, "fopen: %s: %m\n", EXTRA_LED "/brightness");
+	status_led_stream = fopen(STATUS_LED "/brightness", "w");
+	if (status_led_stream == NULL) {
+		fprintf(stderr, "fopen: %s: %m\n", STATUS_LED "/brightness");
 		exit(EXIT_FAILURE);
 	}
 	errno = 0;
-	if (setvbuf(extra_led_stream, NULL, _IONBF, 0) != 0) {
+	if (setvbuf(status_led_stream, NULL, _IONBF, 0) != 0) {
 		fprintf(stderr, "setvbuf: %s (fd %d): %m\n",
-			EXTRA_LED "/brightness", fileno(extra_led_stream));
+			STATUS_LED "/brightness", fileno(status_led_stream));
 		exit(EXIT_FAILURE);
 	}
-	if (fprintf(extra_led_stream, "0\n") < 0) {
+	if (fprintf(status_led_stream, "0\n") < 0) {
 		fprintf(stderr, "fprintf: %s (fd %d): %m\n",
-			EXTRA_LED "/brightness", fileno(extra_led_stream));
+			STATUS_LED "/brightness", fileno(status_led_stream));
 		exit(EXIT_FAILURE);
 	}
 
