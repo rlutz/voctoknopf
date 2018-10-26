@@ -16,7 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 TARGET_PREFIX ?= mipsel-openwrt-linux-
-OBJECTS = main.o v1.0.o handler.o
+OBJECTS = main.o protocol.o v1.0.o handler.o
 
 all: voctoknopf
 

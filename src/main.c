@@ -227,6 +227,16 @@ static void try_connect(const char *host)
 	sockbuf_overflow = false;
 
 	set_status_led(true);
+
+	server_stream_status = ss_unknown;
+	server_composite_mode = cm_unknown;
+	server_video_status_a = vs_unknown;
+	server_video_status_b = vs_unknown;
+
+	send_cmd("get_stream_status\n"
+		 "get_composite_mode\n"
+		 "get_video\n");
+
 	init();
 }
 
