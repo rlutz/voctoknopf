@@ -424,8 +424,14 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "fopen: %s: %m\n", EXTRA_LED "/brightness");
 		exit(EXIT_FAILURE);
 	}
+	errno = 0;
 	if (setvbuf(extra_led_stream, NULL, _IONBF, 0) != 0) {
 		fprintf(stderr, "setvbuf: %s (fd %d): %m\n",
+			EXTRA_LED "/brightness", fileno(extra_led_stream));
+		exit(EXIT_FAILURE);
+	}
+	if (fprintf(extra_led_stream, "0\n") < 0) {
+		fprintf(stderr, "fprintf: %s (fd %d): %m\n",
 			EXTRA_LED "/brightness", fileno(extra_led_stream));
 		exit(EXIT_FAILURE);
 	}
