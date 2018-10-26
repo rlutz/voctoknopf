@@ -21,8 +21,10 @@
 #include "voctoknopf.h"
 
 enum server_stream_status server_stream_status;
-enum server_composite_mode server_composite_mode;
-enum server_video_status server_video_status_a, server_video_status_b;
+enum server_composite_mode server_composite_mode,
+			   green_composite_mode;
+enum server_video_status server_video_status_a, server_video_status_b,
+			 green_video_status_a, green_video_status_b;
 
 
 static void stream_status(const char *arg)
@@ -82,12 +84,67 @@ static void video_status(const char *arg_a, const char *arg_b)
 	server_status_changed();
 }
 
-static void message(const char *arg)
+static void message(char *arg)
 {
-	/* ignore */
+	char *space, *arg_a, *arg_b;
+
+	if (strncmp(arg, "green ", 6) != 0)
+		return;
+
+	arg_a = arg + 6;
+	space = strchr(arg_a, ' ');
+	if (space == NULL) {
+		fprintf(stderr, "invalid message \"%s\"\n", arg);
+		return;
+	}
+	arg_b = space + 1;
+	space = strchr(arg_b, ' ');
+	if (space == NULL) {
+		fprintf(stderr, "invalid message \"%s\"\n", arg);
+		return;
+	}
+	arg = space + 1;
+
+	arg_b[-1] = '\0';
+	arg[-1] = '\0';
+
+	if (strcmp(arg, "fullscreen") == 0)
+		green_composite_mode = cm_fullscreen;
+	else if (strcmp(arg, "side_by_side_equal") == 0)
+		green_composite_mode = cm_side_by_side_equal;
+	else if (strcmp(arg, "side_by_side_preview") == 0)
+		green_composite_mode = cm_side_by_side_preview;
+	else if (strcmp(arg, "picture_in_picture") == 0)
+		green_composite_mode = cm_picture_in_picture;
+	else
+		green_composite_mode = cm_unknown;
+
+	if (strcmp(arg_a, "cam1") == 0)
+		green_video_status_a = vs_cam1;
+	else if (strcmp(arg_a, "cam2") == 0)
+		green_video_status_a = vs_cam2;
+	else if (strcmp(arg_a, "cam3") == 0)
+		green_video_status_a = vs_cam3;
+	else if (strcmp(arg_a, "slides") == 0)
+		green_video_status_a = vs_slides;
+	else
+		green_video_status_a = vs_unknown;
+
+	if (strcmp(arg_b, "cam1") == 0)
+		green_video_status_b = vs_cam1;
+	else if (strcmp(arg_b, "cam2") == 0)
+		green_video_status_b = vs_cam2;
+	else if (strcmp(arg_b, "cam3") == 0)
+		green_video_status_b = vs_cam3;
+	else if (strcmp(arg_b, "slides") == 0)
+		green_video_status_b = vs_slides;
+	else
+		green_video_status_b = vs_unknown;
+
+	green_status_changed();
 }
 
-void server_status(const char *s)
+void server_status(char *s)
 {
 	if (strncmp(s, "stream_status ", 14) == 0)
 		stream_status(s + 14);

@@ -334,3 +334,8 @@ void server_status_changed()
 
 	update_leds();
 }
+
+void green_status_changed()
+{
+	/* ignore */
+}

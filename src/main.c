@@ -220,6 +220,10 @@ static void try_connect(const char *host)
 	server_video_status_a = vs_unknown;
 	server_video_status_b = vs_unknown;
 
+	green_composite_mode = cm_unknown;
+	green_video_status_a = vs_unknown;
+	green_video_status_b = vs_unknown;
+
 	send_cmd("get_stream_status\n"
 		 "get_composite_mode\n"
 		 "get_video\n");

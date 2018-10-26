@@ -43,7 +43,8 @@ extern enum server_composite_mode {
 	cm_side_by_side_preview,
 	cm_picture_in_picture,
 	cm_unknown = -1
-} server_composite_mode;
+} server_composite_mode,
+  green_composite_mode;
 
 extern enum server_video_status {
 	vs_cam1,
@@ -51,9 +52,10 @@ extern enum server_video_status {
 	vs_cam3,
 	vs_slides,
 	vs_unknown = -1
-} server_video_status_a, server_video_status_b;
+} server_video_status_a, server_video_status_b,
+  green_video_status_a, green_video_status_b;
 
-void server_status(const char *s);
+void server_status(char *s);
 
 
 /* provided by device source file */
@@ -73,6 +75,7 @@ int blink(void);
 void button(int i);
 
 void server_status_changed();
+void green_status_changed();
 
 
 #endif
