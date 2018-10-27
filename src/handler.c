@@ -166,7 +166,7 @@ static void update_projection_leds()
 }
 
 
-void bank0(int button)
+static void bank0(int button)
 {
 	mode_presel = button;
 	update_leds();
@@ -174,12 +174,12 @@ void bank0(int button)
 	update_preview();
 }
 
-void bank1(int button)
+static void bank1(int button)
 {
 	/* not yet implemented */
 }
 
-void bank2(int button)
+static void bank2(int button)
 {
 	if (button != s_projection && button != s_cam1 && button != s_cam2)
 		return;
@@ -196,7 +196,7 @@ void bank2(int button)
 	update_preview();
 }
 
-void bank3(int button)
+static void bank3(int button)
 {
 	if (button != s_projection && button != s_cam1 && button != s_cam2)
 		return;
@@ -210,7 +210,7 @@ void bank3(int button)
 	update_preview();
 }
 
-void take()
+static void take()
 {
 	if (mode_presel == m_off) {
 		send_cmd("set_stream_blank pause\n");
@@ -238,6 +238,22 @@ void take()
 	update_green_tally();
 
 	/* don't update XXX_active; wait for server response instead */
+}
+
+void button(int i)
+{
+	switch (i) {
+	case 0: case 1: case 2: case 3: case 4:
+		bank0(i); break;
+	case 5: case 6: case 7: case 8: case 9:
+		bank1(i - 5); break;
+	case 10: case 11: case 12: case 13: case 14:
+		bank2(i - 10); break;
+	case 15: case 16: case 17: case 18: case 19:
+		bank3(i - 15); break;
+	case 20:
+		take(); break;
+	}
 }
 
 static void update_green_tally()

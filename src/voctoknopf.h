@@ -69,11 +69,7 @@ extern const char *status_led;
 
 void init(void);
 
-void bank0(int button);
-void bank1(int button);
-void bank2(int button);
-void bank3(int button);
-void take(void);
+void button(int i);
 
 void server_status_changed();
 

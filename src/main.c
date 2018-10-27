@@ -140,18 +140,7 @@ static void read_bank(unsigned int bank)
 	for (unsigned int i = bank * 5;
 	     i < (bank + 1) * 5 + (bank == 3); i++) {
 		if (!button_state[i] && newstate[i])
-			switch (i) {
-			case 0: case 1: case 2: case 3: case 4:
-				bank0(i); break;
-			case 5: case 6: case 7: case 8: case 9:
-				bank1(i - 5); break;
-			case 10: case 11: case 12: case 13: case 14:
-				bank2(i - 10); break;
-			case 15: case 16: case 17: case 18: case 19:
-				bank3(i - 15); break;
-			case 20:
-				take(); break;
-			}
+			button(i);
 		button_state[i] = newstate[i];
 	}
 }
