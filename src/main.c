@@ -503,7 +503,7 @@ int main(int argc, char* argv[])
 			try_connect(argv[1]);
 
 		fds[IRQ_COUNT].fd = sockfd;
-		if ((connected ? poll(fds, IRQ_COUNT + 1, -1)
+		if ((connected ? poll(fds, IRQ_COUNT + 1, blink())
 			       : poll(fds, IRQ_COUNT, 1000)) == -1
 		    && errno != EINTR) {
 			fprintf(stderr, "poll: %m\n");

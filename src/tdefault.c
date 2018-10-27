@@ -131,6 +131,11 @@ void init()
 	projection = p_unknown;
 }
 
+int blink()
+{
+	return -1;
+}
+
 
 static void update_leds()
 {

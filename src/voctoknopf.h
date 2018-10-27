@@ -68,6 +68,7 @@ extern const char *status_led;
 /* provided by task source file */
 
 void init(void);
+int blink(void);
 
 void button(int i);
 
