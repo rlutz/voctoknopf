@@ -19,7 +19,7 @@
 #define VOCTOKNOPF_H
 
 #include <stdbool.h>
-#include "v1.0.h"
+#include DEVICE_H
 
 
 /* provided by main */
@@ -65,7 +65,7 @@ extern const char *irq_gpio[IRQ_COUNT];
 extern const char *status_led;
 
 
-/* provided by high-level handler */
+/* provided by task source file */
 
 void init(void);
 

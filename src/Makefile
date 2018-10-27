@@ -16,17 +16,23 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 TARGET_PREFIX ?= mipsel-openwrt-linux-
-OBJECTS = main.o protocol.o v1.0.o handler.o
 
-all: voctoknopf
+DEVICES = v1.0
+TARGETS = v1.0-tdefault
+COMMON_OBJECTS = main.o protocol.o
 
-voctoknopf: $(OBJECTS)
-	$(TARGET_PREFIX)gcc -o $@ $^
+all: $(TARGETS)
 
-%.o: %.c voctoknopf.h v1.0.h
-	$(TARGET_PREFIX)gcc -c $<
+$(foreach device,$(DEVICES),$(eval \
+$$(filter $(device)-%,$$(TARGETS)): \
+$(device)-%: $$(addprefix $(device)-,$$(COMMON_OBJECTS) $(device).o %.o); \
+	$$(TARGET_PREFIX)gcc -o $$@ $$^))
+
+$(foreach device,$(DEVICES),$(eval \
+$(device)-%.o: %.c voctoknopf.h $(device).h; \
+	$$(TARGET_PREFIX)gcc -DDEVICE_H=\"$(device).h\" -c -o $$@ $$<))
 
 clean:
-	rm -f $(OBJECTS) voctoknopf
+	rm -f *.o $(TARGETS)
 
 .PHONY: all clean
