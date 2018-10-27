@@ -124,8 +124,7 @@ static void read_bank(unsigned int bank)
 			exit(EXIT_FAILURE);
 		}
 
-		for (unsigned int i = bank * 5;
-		     i < (bank + 1) * 5 + (bank == 3); i++)
+		for (unsigned int i = 0; i < BUTTON_COUNT; i++)
 			newstate[i] = get_button_state(i);
 
 		if (poll(&pollfd, 1, 0) == -1) {
@@ -137,8 +136,7 @@ static void read_bank(unsigned int bank)
 	if (!connected)
 		return;
 
-	for (unsigned int i = bank * 5;
-	     i < (bank + 1) * 5 + (bank == 3); i++) {
+	for (unsigned int i = 0; i < BUTTON_COUNT; i++) {
 		if (!button_state[i] && newstate[i])
 			button(i);
 		button_state[i] = newstate[i];
