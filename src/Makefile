@@ -17,8 +17,8 @@
 
 TARGET_PREFIX ?= mipsel-openwrt-linux-
 
-DEVICES = v1.0 v1.1
-TARGETS = v1.0-tdefault v1.1-imatrix
+DEVICES = v1.0 v1.1 tallypi
+TARGETS = v1.0-tdefault v1.1-imatrix tallypi-tally
 COMMON_OBJECTS = main.o protocol.o
 
 all: $(TARGETS)
