@@ -20,21 +20,8 @@
 
 #include <stdbool.h>
 
-void init(void);
 
-/* button handlers */
-
-void bank0(int button);
-void bank1(int button);
-void bank2(int button);
-void bank3(int button);
-void take(void);
-
-/* socket handler */
-
-void server_status(const char *s);
-
-/* re-callbacks for main */
+/* provided by main */
 
 enum led {
 	led_k1green, led_k1red,
@@ -62,5 +49,19 @@ enum led {
 
 void set_led(enum led led, bool value);
 void send_cmd(const char *s);
+
+
+/* provided by handler */
+
+void init(void);
+
+void bank0(int button);
+void bank1(int button);
+void bank2(int button);
+void bank3(int button);
+void take(void);
+
+void server_status(const char *s);
+
 
 #endif
