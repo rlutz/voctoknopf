@@ -410,7 +410,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	for (int i = 0; i < BUTTON_COUNT; i++) {
+	for (unsigned int i = 0; i < BUTTON_COUNT; i++) {
 		char pathname[BUFSIZ];
 		if (snprintf(pathname, sizeof pathname,
 			     "%s/value", button_gpio[i]) >= sizeof pathname) {
