@@ -335,42 +335,41 @@ static void update_active()
 		mode_active = m_unknown;
 		srca_active = m_unknown;
 		srcb_active = m_unknown;
-		return;
-	}
+	} else {
+		if (server_stream_status != ss_live)
+			mode_active = m_off;
+		else switch (server_composite_mode) {
+		case cm_fullscreen:
+			mode_active = m_fullscreen; break;
+		case cm_side_by_side_equal:
+			mode_active = m_sbs_equal; break;
+		case cm_side_by_side_preview:
+			mode_active = m_sbs_preview; break;
+		case cm_picture_in_picture:
+			mode_active = m_picture_in_picture; break;
+		}
 
-	if (server_stream_status != ss_live)
-		mode_active = m_off;
-	else switch (server_composite_mode) {
-	case cm_fullscreen:
-		mode_active = m_fullscreen; break;
-	case cm_side_by_side_equal:
-		mode_active = m_sbs_equal; break;
-	case cm_side_by_side_preview:
-		mode_active = m_sbs_preview; break;
-	case cm_picture_in_picture:
-		mode_active = m_picture_in_picture; break;
-	}
+		switch (server_video_status_a) {
+		case vs_cam1: srca_active = s_cam1; break;
+		case vs_cam2: srca_active = s_cam2; break;
+		case vs_cam3: srca_active = s_cam3; break;
+		case vs_slides: srca_active = s_projection; break;
+		}
+		switch (server_video_status_b) {
+		case vs_cam1: srcb_active = s_cam1; break;
+		case vs_cam2: srcb_active = s_cam2; break;
+		case vs_cam3: srcb_active = s_cam3; break;
+		case vs_slides: srcb_active = s_projection; break;
+		}
 
-	switch (server_video_status_a) {
-	case vs_cam1: srca_active = s_cam1; break;
-	case vs_cam2: srca_active = s_cam2; break;
-	case vs_cam3: srca_active = s_cam3; break;
-	case vs_slides: srca_active = s_projection; break;
-	}
-	switch (server_video_status_b) {
-	case vs_cam1: srcb_active = s_cam1; break;
-	case vs_cam2: srcb_active = s_cam2; break;
-	case vs_cam3: srcb_active = s_cam3; break;
-	case vs_slides: srcb_active = s_projection; break;
-	}
-
-	if (mode_presel == m_unknown || srca_presel == s_unknown ||
-					srcb_presel == s_unknown) {
-		/* on startup, pre-select currently active state */
-		mode_presel = mode_active;
-		srca_presel = srca_active;
-		srcb_presel = srcb_active;
-		update_green_tally();
+		if (mode_presel == m_unknown || srca_presel == s_unknown ||
+						srcb_presel == s_unknown) {
+			/* on startup, pre-select currently active state */
+			mode_presel = mode_active;
+			srca_presel = srca_active;
+			srcb_presel = srcb_active;
+			update_green_tally();
+		}
 	}
 
 	update_leds();
