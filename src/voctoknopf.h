@@ -69,6 +69,11 @@ extern const char *status_led;
 
 /* provided by task source file */
 
+extern const char *extra_usage;
+extern int extra_argc;
+
+void handle_extra_args(char* extra_argv[]);
+
 void init(void);
 int blink(void);
 

@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include "voctoknopf.h"
 
+const char *extra_usage = "";
+int extra_argc = 0;
+
 static enum {
 	m_off,
 	m_sbs_equal,
@@ -117,6 +120,11 @@ static const char *mode_names_for_server[] = {
 static void update_green_tally();
 static void update_preview();
 
+
+void handle_extra_args(char* extra_argv[])
+{
+	/* no extra command-line arguments */
+}
 
 void init()
 {

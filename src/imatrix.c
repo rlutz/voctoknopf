@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include "voctoknopf.h"
 
+const char *extra_usage = "";
+int extra_argc = 0;
+
 static enum source {
 	s_off,
 	s_projection,
@@ -99,6 +102,11 @@ static const char *mode_names_for_server[] = {
 	"<undefined>"
 };
 
+
+void handle_extra_args(char* extra_argv[])
+{
+	/* no extra command-line arguments */
+}
 
 void init()
 {

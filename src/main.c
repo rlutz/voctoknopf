@@ -370,9 +370,9 @@ static FILE *open_unbuffered(const char *dirname, const char *initval)
 
 int main(int argc, char* argv[])
 {
-	if (argc != 2 || strcmp(argv[1], "--help") == 0) {
-		fprintf(stderr, "Usage: %s HOST\n", argv[0]);
-		exit(argc == 2 ? EXIT_SUCCESS : EXIT_FAILURE);
+	if (argc != 2 + extra_argc || strcmp(argv[1], "--help") == 0) {
+		fprintf(stderr, "Usage: %s HOST %s\n", argv[0], extra_usage);
+		exit(argc == 2 + extra_argc ? EXIT_SUCCESS : EXIT_FAILURE);
 	}
 	if (strcmp(argv[1], "--version") == 0) {
 		fprintf(stderr, "Voctoknopf - video mixer control device ");
@@ -394,6 +394,7 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Public License for more details.\n");
 		exit(EXIT_SUCCESS);
 	}
+	handle_extra_args(argv + 2);
 
 	struct sigaction sact = { .sa_handler = sighandler, .sa_flags = 0 };
 	sigemptyset(&sact.sa_mask);
