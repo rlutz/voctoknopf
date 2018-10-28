@@ -29,4 +29,4 @@ voctoknopf: $(OBJECTS)
 clean:
 	rm -f $(OBJECTS) voctoknopf
 
-.PHONY: clean
+.PHONY: all clean
