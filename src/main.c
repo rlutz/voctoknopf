@@ -32,6 +32,7 @@
 #include <stdbool.h>
 #include <pwd.h>
 #include <netinet/tcp.h>
+#include <grp.h>
 
 #include "voctoknopf.h"
 

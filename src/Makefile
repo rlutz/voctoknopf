@@ -15,22 +15,25 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-TARGET_PREFIX ?= mipsel-openwrt-linux-
-
 DEVICES = v1.0 v1.1 tallypi
 TARGETS = v1.0-tdefault v1.1-imatrix tallypi-tally
 COMMON_OBJECTS = main.o protocol.o
+
+v1_0_TARGET_PREFIX = mipsel-openwrt-linux-
+v1_1_TARGET_PREFIX = mipsel-openwrt-linux-
+tallypi_TARGET_PREFIX = arm-linux-gnueabihf-
 
 all: $(TARGETS)
 
 $(foreach device,$(DEVICES),$(eval \
 $$(filter $(device)-%,$$(TARGETS)): \
 $(device)-%: $$(addprefix $(device)-,$$(COMMON_OBJECTS) $(device).o %.o); \
-	$$(TARGET_PREFIX)gcc -o $$@ $$^))
+	$$($(subst .,_,$(device))_TARGET_PREFIX)gcc -o $$@ $$^))
 
 $(foreach device,$(DEVICES),$(eval \
 $(device)-%.o: %.c voctoknopf.h $(device).h; \
-	$$(TARGET_PREFIX)gcc -DDEVICE_H=\"$(device).h\" -c -o $$@ $$<))
+	$$($(subst .,_,$(device))_TARGET_PREFIX)gcc \
+		-DDEVICE_H=\"$(device).h\" -c -o $$@ $$<))
 
 clean:
 	rm -f *.o $(TARGETS)
