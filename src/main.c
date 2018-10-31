@@ -326,6 +326,47 @@ static void sighandler(int sig)
 	quit = true;
 }
 
+static FILE *open_unbuffered(const char *dirname, const char *initval)
+{
+	char *format;
+	if (strncmp(dirname, "/sys/class/leds/", 16) == 0)
+		format = "%s/brightness";
+	else if (strncmp(dirname, "/sys/class/gpio/", 16) == 0)
+		format = "%s/value";
+	else {
+		fprintf(stderr, "Not a GPIO or LED path: %s\n", dirname);
+		exit(EXIT_FAILURE);
+	}
+
+	char pathname[BUFSIZ];
+	if (snprintf(pathname, sizeof pathname,
+		     format, dirname) >= sizeof pathname) {
+		fprintf(stderr, "GPIO/LED path too long: %s\n", dirname);
+		exit(EXIT_FAILURE);
+	}
+
+	FILE *f = fopen(pathname, "w");
+	if (f == NULL) {
+		fprintf(stderr, "fopen: %s: %m\n", pathname);
+		exit(EXIT_FAILURE);
+	}
+
+	errno = 0;
+	if (setvbuf(f, NULL, _IONBF, 0) != 0) {
+		fprintf(stderr, "setvbuf: %s (fd %d): %m\n",
+				pathname, fileno(f));
+		exit(EXIT_FAILURE);
+	}
+
+	if (fprintf(f, "%s\n", initval) < 0) {
+		fprintf(stderr, "fprintf: %s (fd %d): %m\n",
+				pathname, fileno(f));
+		exit(EXIT_FAILURE);
+	}
+
+	return f;
+}
+
 int main(int argc, char* argv[])
 {
 	if (argc != 2 || strcmp(argv[1], "--help") == 0) {
@@ -358,57 +399,13 @@ int main(int argc, char* argv[])
 	sigaction(SIGINT, &sact, NULL);
 	sigaction(SIGTERM, &sact, NULL);
 
-	for (unsigned int i = 0; i < LED_COUNT; i++) {
-		char pathname[BUFSIZ];
-		if (snprintf(pathname, sizeof pathname,
-			     "%s/value", led_gpio[i]) >= sizeof pathname) {
-			fprintf(stderr, "GPIO pathname too long\n");
-			exit(EXIT_FAILURE);
-		}
-		led_stream[i] = fopen(pathname, "w");
-		if (led_stream[i] == NULL) {
-			fprintf(stderr, "fopen: %s: %m\n", pathname);
-			exit(EXIT_FAILURE);
-		}
-		errno = 0;
-		if (setvbuf(led_stream[i], NULL, _IONBF, 0) != 0) {
-			fprintf(stderr, "setvbuf: %s (fd %d): %m\n",
-					pathname, fileno(led_stream[i]));
-			exit(EXIT_FAILURE);
-		}
-		if (fprintf(led_stream[i], "0\n") < 0) {
-			fprintf(stderr, "fprintf: %s (fd %d): %m\n",
-					pathname, fileno(led_stream[i]));
-			exit(EXIT_FAILURE);
-		}
-	}
+	for (unsigned int i = 0; i < LED_COUNT; i++)
+		led_stream[i] = open_unbuffered(led_gpio[i], "0");
 
 	if (status_led == NULL)
 		status_led_stream = NULL;
-	else {
-		char pathname[BUFSIZ];
-		if (snprintf(pathname, sizeof pathname,
-			     "%s/brightness", status_led) >= sizeof pathname) {
-			fprintf(stderr, "GPIO pathname too long\n");
-			exit(EXIT_FAILURE);
-		}
-		status_led_stream = fopen(pathname, "w");
-		if (status_led_stream == NULL) {
-			fprintf(stderr, "fopen: %s: %m\n", pathname);
-			exit(EXIT_FAILURE);
-		}
-		errno = 0;
-		if (setvbuf(status_led_stream, NULL, _IONBF, 0) != 0) {
-			fprintf(stderr, "setvbuf: %s (fd %d): %m\n",
-					pathname, fileno(status_led_stream));
-			exit(EXIT_FAILURE);
-		}
-		if (fprintf(status_led_stream, "0\n") < 0) {
-			fprintf(stderr, "fprintf: %s (fd %d): %m\n",
-					pathname, fileno(status_led_stream));
-			exit(EXIT_FAILURE);
-		}
-	}
+	else
+		status_led_stream = open_unbuffered(status_led, "0");
 
 	for (unsigned int i = 0; i < BUTTON_COUNT; i++) {
 		char pathname[BUFSIZ];
