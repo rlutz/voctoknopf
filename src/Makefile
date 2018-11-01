@@ -23,6 +23,8 @@ v1_0_TARGET_PREFIX = mipsel-openwrt-linux-
 v1_1_TARGET_PREFIX = mipsel-openwrt-linux-
 tallypi_TARGET_PREFIX = arm-linux-gnueabihf-
 
+prefix = /usr/local
+
 all: $(TARGETS)
 
 $(foreach device,$(DEVICES),$(eval \
@@ -41,4 +43,31 @@ tallypi.dtbo: tallypi-overlay.dts
 clean:
 	rm -f *.o $(TARGETS)
 
-.PHONY: all clean
+all-tally: tallypi-tally tallypi.dtbo
+
+install-tally: all-tally
+	install -m 0644 tallypi.dtbo $(DESTDIR)/boot/overlays/
+	sed -e '0,/^#\?dtoverlay=tallypi/s/^#\(dtoverlay=tallypi\)/\1/' \
+		-i $(DESTDIR)/boot/config.txt
+	grep '^dtoverlay=tallypi' $(DESTDIR)/boot/config.txt >/dev/null || \
+		echo dtoverlay=tallypi >> $(DESTDIR)/boot/config.txt
+
+	install -d $(DESTDIR)$(prefix)/bin/
+	install -m 0755 tallypi-tally $(DESTDIR)$(prefix)/bin/
+
+	install -d $(DESTDIR)$(prefix)/lib/systemd/system/
+	sed -e 's|@prefix@|$(prefix)|' tally.service.in > \
+		$(DESTDIR)$(prefix)/lib/systemd/system/tally.service
+	systemctl enable tally
+
+	@echo "*** Tally has been installed; please reboot ***"
+
+uninstall-tally:
+	-systemctl disable tally
+	rm -f $(DESTDIR)$(prefix)/lib/systemd/system/tally.service
+	rm -f $(DESTDIR)$(prefix)/bin/tallypi-tally
+
+	sed -e 's/^dtoverlay=tallypi/#&/' -i $(DESTDIR)/boot/config.txt
+	rm -f $(DESTDIR)/boot/overlays/tallypi.dtbo
+
+.PHONY: all clean all-tally install-tally uninstall-tally
