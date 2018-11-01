@@ -1,6 +1,37 @@
 Voctoknopf software
 -------------------
 
+This directory contains the software for various versions of the
+Voctoknopf, as well as the Raspberry Pi running the tally light.
+
+The source code is split into three parts:
+
+* The *task* source file contains the actual logic and determines
+  which actions should be issued in response to button presses and
+  status updates from the server.
+
+* The *device* header and source files define the LEDs, buttons and
+  IRQs available on a particular device.
+
+* `main.o` (which waits for buttons presses, lights LEDs, and
+  communicates with the Voctocore server via TCP) and `protocol.o`
+  (which handles the command protocol) and are shared by all targets.
+
+Target names are of the form `<DEVICE>-<TASK>`.  The following targets
+are currently defined:
+
+Target          | Device         | Task
+----------------|----------------|---------------------------------------------
+`v1.0-tdefault` | Voctoknopf 1.0 | Default layout, with “TAKE” button
+`v1.1-imatrix`  | Voctoknopf 1.1 | Matrix layout, buttons have immediate effect
+`tallypi-tally` | Tally Pi       | Lights up while a specific source is live
+
+
+The remainder of this document handles the software for Voctoknopf 1.0
+and 1.1.  [See here for more information about the tally software.](Tally.md)
+
+---
+
 The `voctoknopf` executable runs on the Ralink RT5350F SoC.  It is
 built using the OpenWRT target toolchain:
 
@@ -9,15 +40,6 @@ export PATH=${HOME}/openwrt/staging_dir/host/bin:${HOME}/openwrt/staging_dir/too
 export STAGING_DIR=${HOME}/openwrt/staging_dir
 make
 ```
-
-The source code is split into two parts:
-
-* `main.c` waits for buttons presses, lights LEDs, and communicates
-  with the Voctocore server via TCP
-
-* `handler.c` contains the actual logic and determines which actions
-  should be issued in response to button presses and status updates
-
 
 The software maintains two states of the main video mixer: the
 preselected state (indicated by green LEDs) and the currently active
