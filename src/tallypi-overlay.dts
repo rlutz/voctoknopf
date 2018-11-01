@@ -1,0 +1,37 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2708";
+
+	fragment@0 {
+		target = <&leds>;
+		__overlay__ {
+			led_live: live {
+				label = "tallypi:red:live";
+				gpios = <&gpio 17 1>;
+			};
+
+			led_preview: preview {
+				label = "tallypi:green:preview";
+				gpios = <&gpio 18 1>;
+			};
+
+			led_status: status {
+				label = "tallypi:blue:status";
+				gpios = <&gpio 27 0>;
+			};
+		};
+	};
+
+	__overrides__ {
+		live_gpio = <&led_live>,"gpios:4";
+		live_activelow = <&led_live>,"gpios:8";
+
+		preview_gpio = <&led_preview>,"gpios:4";
+		preview_activelow = <&led_preview>,"gpios:8";
+
+		status_gpio = <&led_status>,"gpios:4";
+		status_activelow = <&led_status>,"gpios:8";
+	};
+};

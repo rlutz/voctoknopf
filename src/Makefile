@@ -16,7 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 DEVICES = v1.0 v1.1 tallypi
-TARGETS = v1.0-tdefault v1.1-imatrix tallypi-tally
+TARGETS = v1.0-tdefault v1.1-imatrix tallypi-tally tallypi.dtbo
 COMMON_OBJECTS = main.o protocol.o
 
 v1_0_TARGET_PREFIX = mipsel-openwrt-linux-
@@ -34,6 +34,9 @@ $(foreach device,$(DEVICES),$(eval \
 $(device)-%.o: %.c voctoknopf.h $(device).h; \
 	$$($(subst .,_,$(device))_TARGET_PREFIX)gcc \
 		-DDEVICE_H=\"$(device).h\" -c -o $$@ $$<))
+
+tallypi.dtbo: tallypi-overlay.dts
+	dtc -W no_unit_address_vs_reg -I dts -O dtb -o $@ $<
 
 clean:
 	rm -f *.o $(TARGETS)
