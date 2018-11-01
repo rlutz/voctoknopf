@@ -54,13 +54,16 @@ install-tally: all-tally
 
 	install -d $(DESTDIR)$(prefix)/bin/
 	install -m 0755 tallypi-tally $(DESTDIR)$(prefix)/bin/
+	test -f $(DESTDIR)/etc/tally.conf || \
+		install -m 0644 tally.conf $(DESTDIR)/etc/
 
 	install -d $(DESTDIR)$(prefix)/lib/systemd/system/
 	sed -e 's|@prefix@|$(prefix)|' tally.service.in > \
 		$(DESTDIR)$(prefix)/lib/systemd/system/tally.service
 	systemctl enable tally
 
-	@echo "*** Tally has been installed; please reboot ***"
+	@echo "*** Tally has been installed; please edit" \
+	      "$(DESTDIR)/etc/tally.conf and reboot ***"
 
 uninstall-tally:
 	-systemctl disable tally

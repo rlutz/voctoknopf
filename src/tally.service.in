@@ -3,7 +3,8 @@ Description=Voctomix Tally Light
 Documentation=https://c3voc.de/wiki/projects:tallycom
 
 [Service]
-ExecStart=@prefix@/bin/tallypi-tally 10.73.1.3 cam1
+EnvironmentFile=/etc/tally.conf
+ExecStart=/bin/sh -c '@prefix@/bin/tallypi-tally ${host} ${source}'
 Restart=always
 RestartSec=5
 ProtectHome=yes
