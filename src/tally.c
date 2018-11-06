@@ -80,6 +80,7 @@ void server_status_changed()
 		red = server_video_status_a == us ||
 		      server_video_status_b == us;
 
+	green = false;
 	update_leds();
 }
 
