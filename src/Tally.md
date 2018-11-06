@@ -42,21 +42,20 @@ overlay by adding them to the instantiating line in
 `/boot/config.txt`, for example:
 
 ```
-dtoverlay=tallypi,live_gpio=22,preview_gpio=23
+dtoverlay=tallypi,red_gpio=22,green_gpio=23
 ```
 
 The following configuration options are available:
 
-* `live_gpio`, `preview_gpio`, `status_gpio`: Set the GPIO (BCM)
-  number of the live, preview, and status LED, respectively.  This is
-  *not* the pin number on the header; see https://pinout.xyz/ for
-  details.
+* `red_gpio`, `green_gpio`, `blue_gpio`: Set the GPIO (BCM) number of
+  the red, green, and blue LED, respectively.  This is *not* the pin
+  number on the header; see https://pinout.xyz/ for details.
 
-* `live_activelow`, `preview_activelow`, `status_activelow`: Set
-  whether the corresponding LED is active low.  A value of `1` means
-  that the pin should be high on bootup and changed to low by the
-  software; `0` means that the pin should be low on bootup and changed
-  to high by the software.
+* `red_activelow`, `green_activelow`, `blue_activelow`: Set whether
+  the corresponding LED is active low.  A value of `1` means that the
+  pin should be high on bootup and changed to low by the software; `0`
+  means that the pin should be low on bootup and changed to high by
+  the software.
 
 
 ### Automated starting as a systemd service

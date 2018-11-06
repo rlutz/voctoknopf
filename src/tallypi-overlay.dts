@@ -7,17 +7,17 @@
 	fragment@0 {
 		target = <&leds>;
 		__overlay__ {
-			led_live: live {
+			led_red: live {
 				label = "tallypi:red:live";
 				gpios = <&gpio 17 1>;
 			};
 
-			led_preview: preview {
+			led_green: preview {
 				label = "tallypi:green:preview";
 				gpios = <&gpio 18 1>;
 			};
 
-			led_status: status {
+			led_blue: status {
 				label = "tallypi:blue:status";
 				gpios = <&gpio 27 0>;
 			};
@@ -25,13 +25,13 @@
 	};
 
 	__overrides__ {
-		live_gpio = <&led_live>,"gpios:4";
-		live_activelow = <&led_live>,"gpios:8";
+		red_gpio = <&led_red>,"gpios:4";
+		red_activelow = <&led_red>,"gpios:8";
 
-		preview_gpio = <&led_preview>,"gpios:4";
-		preview_activelow = <&led_preview>,"gpios:8";
+		green_gpio = <&led_green>,"gpios:4";
+		green_activelow = <&led_green>,"gpios:8";
 
-		status_gpio = <&led_status>,"gpios:4";
-		status_activelow = <&led_status>,"gpios:8";
+		blue_gpio = <&led_blue>,"gpios:4";
+		blue_activelow = <&led_blue>,"gpios:8";
 	};
 };
